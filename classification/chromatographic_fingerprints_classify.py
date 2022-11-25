@@ -237,41 +237,21 @@ def train(fast=False):
     train_ds = create_dataset(X_train, y_train, 'cpu')
     test_ds = create_dataset(X_test, y_test, 'cpu')
 
-    train_dl = DataLoader(train_ds, batch_size=64, shuffle=False)  # , sampler = sampler)
-    test_dl = DataLoader(test_ds, batch_size=64, shuffle=False)
-
     time_steps = X_train.shape[1]
     num_variables = classes
 
     model = LSTMFCN(time_steps, num_variables)
-
-    # # model summary
-    # for m in model.children():
-    #     print(m.training)  # , m)
-    #     for j in m.children():
-    #         print(j.training, j)
 
     loss_func = nn.NLLLoss()  # weight=weights
     # acc_func = accuracy_thresh
     lr = 3e-3
     bs = 64
 
-    if fast:
-        data = DataLoader(train_dl=train_dl, valid_dl=test_dl, batch_size=64, shuffle=False)
-        learner = Learner(data, model, loss_func=loss_func, lr=lr)
-        learner.fit(10, lr=3e-3)
-        y_preds = learner.get_preds(learner.dls.valid)
-        print(y_preds)
-    else:
-        learner = SimpleLearner([train_dl, test_dl], model, loss_func)
-        losses = learner.fit(10, lr=lr)
-
-        plt.plot(losses)
-
-        y_pred = learner.evaluate(test_dl)
-        print(y_pred)
-        pred_loss = ((y_test - y_pred.argmax(axis=1)) ** 2).mean()
-        print(pred_loss)
+    dls = DataLoaders.from_dsets(train_ds, test_ds, bs=bs, shuffle=False)
+    learner = Learner(dls, model, loss_func=loss_func)
+    learner.fit(10, lr=lr)
+    _, y_preds = learner.get_preds()
+    print(y_preds)
 
 
 if __name__ == '__main__':
